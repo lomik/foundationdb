@@ -921,6 +921,14 @@ ACTOR static Future<std::string> beginMultiPartUpload_impl(Reference<BlobStoreEn
 	std::string resource = std::string("/") + bucket + "/" + object + "?uploads";
 	HTTP::Headers headers;
 	Reference<HTTP::Response> r = wait(bstore->doRequest("POST", resource, headers, NULL, 0, {200}));
+
+	json_spirit::mValue json;
+	json_spirit::read_string(r->content, json);
+	JSONDoc doc(json);
+	std::string uploadId;
+	if(doc.tryGet("InitiateMultipartUploadResult.UploadId", uploadId))
+		return uploadId;
+
 	int start = r->content.find("<UploadId>");
 	if(start == std::string::npos)
 		 throw http_bad_response();
