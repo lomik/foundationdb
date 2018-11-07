@@ -779,10 +779,11 @@ std::string BlobStoreEndpoint::hmac_sha1(std::string const &msg) {
 }
 
 void BlobStoreEndpoint::setAuthHeaders(std::string const &verb, std::string const &resource, HTTP::Headers& headers) {
-	time_t ts;
-	time(&ts);
+	char buffer[120];
+	time_t ts = time(nullptr);
+	strftime(buffer, 120, "%a, %d %b %Y %T GMT", gmtime(&ts));
 	std::string &date = headers["Date"];
-	date = std::string(asctime(gmtime(&ts)), 24) + " GMT";  // asctime() returns a 24 character string plus a \n and null terminator.
+	date = buffer;
 	std::string msg;
 	StringRef x;
 	msg.append(verb);
