@@ -50,6 +50,7 @@ BlobStoreEndpoint::Stats BlobStoreEndpoint::s_stats;
 
 BlobStoreEndpoint::BlobKnobs::BlobKnobs() {
 	secure_connection = 1;
+	bucket = CLIENT_KNOBS->BLOBSTORE_BUCKET;
 	connect_tries = CLIENT_KNOBS->BLOBSTORE_CONNECT_TRIES;
 	connect_timeout = CLIENT_KNOBS->BLOBSTORE_CONNECT_TIMEOUT;
 	max_connection_life = CLIENT_KNOBS->BLOBSTORE_MAX_CONNECTION_LIFE;
@@ -103,12 +104,21 @@ bool BlobStoreEndpoint::BlobKnobs::set(StringRef name, int value) {
 	return false;
 }
 
+bool BlobStoreEndpoint::BlobKnobs::setString(StringRef name, std::string value) {
+	#define TRY_PARAM(n, sn) if(name == LiteralStringRef(#n) || name == LiteralStringRef(#sn)) { n = value; return true; }
+	TRY_PARAM(bucket, b);
+	#undef TRY_PARAM
+	return false;
+}
+
 // Returns a Blob URL parameter string that specifies all of the non-default options for the endpoint using option short names.
 std::string BlobStoreEndpoint::BlobKnobs::getURLParameters() const {
 	static BlobKnobs defaults;
 	std::string r;
 	#define _CHECK_PARAM(n, sn) if(n != defaults. n) { r += format("%s%s=%d", r.empty() ? "" : "&", #sn, n); }
+	#define _CHECK_PARAM_STRING(n, sn) if(n != defaults. n) { r += format("%s%s=%s", r.empty() ? "" : "&", #sn, n.c_str()); }
 	_CHECK_PARAM(secure_connection, sc);
+	_CHECK_PARAM_STRING(bucket, b);
 	_CHECK_PARAM(connect_tries, ct);
 	_CHECK_PARAM(connect_timeout, cto);
 	_CHECK_PARAM(max_connection_life, mcl);
@@ -132,6 +142,7 @@ std::string BlobStoreEndpoint::BlobKnobs::getURLParameters() const {
 	_CHECK_PARAM(max_send_bytes_per_second, sbps);
 	_CHECK_PARAM(max_recv_bytes_per_second, rbps);
 	#undef _CHECK_PARAM
+	#undef _CHECK_PARAM_STRING
 	return r;
 }
 
@@ -162,6 +173,13 @@ Reference<BlobStoreEndpoint> BlobStoreEndpoint::fromString(std::string const &ur
 			if(name.size() == 0)
 				break;
 			StringRef value = t.eat("&");
+			if(name.toString() == "b" || name.toString() == "bucket") {
+				if(value.toString().empty())
+					throw format("%s is not a valid value for %s", value.toString().c_str(), name.toString().c_str());
+				if(!knobs.setString(name, value.toString()))
+					throw format("%s is not a valid parameter name", name.toString().c_str());
+				continue;
+			}
 			char *valueEnd;
 			int ivalue = strtol(value.toString().c_str(), &valueEnd, 10);
 			if(*valueEnd || (ivalue == 0 && value.toString() != "0"))

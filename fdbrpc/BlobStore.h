@@ -71,11 +71,14 @@ public:
 			read_cache_blocks_per_file,
 			max_send_bytes_per_second,
 			max_recv_bytes_per_second;
+		std::string bucket;
 		bool set(StringRef name, int value);
+		bool setString(StringRef name, std::string value);
 		std::string getURLParameters() const;
 		static std::vector<std::string> getKnobDescriptions() {
 			return {
 				"secure_connection (or sc)             Set 1 for secure connection and 0 for insecure connection.",
+				"bucket (or b)                         Bucket name.",
 				"connect_tries (or ct)                 Number of times to try to connect for each request.",
 				"connect_timeout (or cto)              Number of seconds to wait for a connect request to succeed.",
 				"max_connection_life (or mcl)          Maximum number of seconds to use a single TCP connection.",
